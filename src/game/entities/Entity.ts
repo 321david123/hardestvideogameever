@@ -318,6 +318,11 @@ export abstract class Entity {
   }
   
   takeDamage(amount: number, knockback: Vec2 = vec2()): void {
+    // God mode check (for Player)
+    if ((this as any).godMode === true) {
+      return; // No damage in god mode
+    }
+    
     this.stats.hp = Math.max(0, this.stats.hp - amount);
     this.state = 'hitstun';
     this.hitstunTimer.start(C.HITSTUN_DURATION);
@@ -330,6 +335,11 @@ export abstract class Entity {
   }
   
   getStunned(duration: number, knockback: Vec2 = vec2()): void {
+    // God mode check (for Player)
+    if ((this as any).godMode === true) {
+      return; // No stun in god mode
+    }
+    
     this.state = 'stunned';
     this.stunTimer.start(duration);
     this.vel = knockback;
@@ -380,6 +390,10 @@ export abstract class Entity {
   }
   
   get isInvulnerable(): boolean {
+    // God mode makes player always invulnerable
+    if ((this as any).godMode === true) {
+      return true;
+    }
     return C.DASH_INVULNERABLE && this.isDashing;
   }
   

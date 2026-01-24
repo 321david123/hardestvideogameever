@@ -388,26 +388,29 @@ export class ArenaScene extends Phaser.Scene {
   private triggerSkillCheck(): void {
     if (this.skillCheck.active) return;
     
-    this.skillCheck.start(
-      () => {
-        // Success - heal player
-        this.player.heal(C.SKILL_CHECK_SUCCESS_HEAL);
+    this.skillCheck.start((result: 'perfect' | 'close' | 'miss') => {
+      if (result === 'perfect') {
+        // Perfect timing - +30 HP
+        this.player.heal(30);
         this.effects.spawnDamageNumber(
           this.player.pos.x,
           this.player.pos.y - 20,
-          C.SKILL_CHECK_SUCCESS_HEAL,
+          30,
           C.COLOR_HEAL
         );
-        console.log('Skill check SUCCESS!');
-      },
-      () => {
-        // Fail - damage player
+        this.effects.triggerScreenShake(5, 0.2);
+        console.log('Skill check PERFECT! +30 HP');
+      } else if (result === 'close') {
+        // Close but not perfect - no effect
+        console.log('Skill check CLOSE - No effect');
+      } else {
+        // Miss - -20 damage
         const knockback = { x: 0, y: 0 };
-        this.player.takeDamage(C.SKILL_CHECK_FAIL_DAMAGE, knockback);
+        this.player.takeDamage(20, knockback);
         this.effects.triggerScreenShake(15, 0.3);
-        console.log('Skill check FAILED!');
+        console.log('Skill check MISS! -20 HP');
       }
-    );
+    });
   }
   
   private checkAttackWarnings(): void {

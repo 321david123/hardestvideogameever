@@ -1,41 +1,67 @@
 /**
- * Skill Check System - Dead by Daylight style QTE
+ * Skill Check System - Timing-based QTE
+ * Shows a letter for 1.5s, then a shrinking square - press at the perfect moment!
  */
 
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import * as C from '../utils/constants';
 
+enum SkillCheckState {
+  SHOWING_LETTER = 'showing_letter',
+  SHRINKING = 'shrinking',
+  WAITING_INPUT = 'waiting_input',
+  COMPLETE = 'complete',
+}
+
 export class SkillCheck {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container | null = null;
   private requiredKey: string = '';
+  private requiredKeyCode: string = '';
+  private state: SkillCheckState = SkillCheckState.SHOWING_LETTER;
   private timer: number = 0;
-  private duration: number = C.SKILL_CHECK_DURATION;
-  private keyChangeTimer: number = 0;
+  private letterShowDuration: number = 1.0; // 1.0 seconds to see the letter (harder)
+  private shrinkDuration: number = 0.35; // 0.35 seconds for square to shrink (faster = harder)
+  private perfectMomentTime: number = 0; // Exact time when square reaches target size
+  private keyPressTime: number = 0; // When player pressed the key
   private isActive: boolean = false;
-  private onSuccess: (() => void) | null = null;
-  private onFail: (() => void) | null = null;
+  private onComplete: ((result: 'perfect' | 'close' | 'miss') => void) | null = null;
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   
   // Key codes for skill checks - NOT movement/action keys
-  // Excludes: W, A, S, D (movement), SPACE (attack), SHIFT (dash), E (shield)
-  private readonly KEYS = ['Q', 'R', 'F', 'G', 'H', 'J', 'K', 'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'T', 'Y', 'U', 'I', 'O', 'P'];
+  // Excludes: W, A, S, D (movement), SPACE (attack), SHIFT (dash), E (shield), G (god mode)
+  private readonly KEYS = ['Q', 'R', 'F', 'H', 'J', 'K', 'L', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'T', 'Y', 'U', 'I', 'O', 'P'];
+  private readonly KEY_CODES: Record<string, string> = {
+    'Q': 'KeyQ', 'R': 'KeyR', 'F': 'KeyF', 'H': 'KeyH', 'J': 'KeyJ',
+    'K': 'KeyK', 'L': 'KeyL', 'Z': 'KeyZ', 'X': 'KeyX', 'C': 'KeyC',
+    'V': 'KeyV', 'B': 'KeyB', 'N': 'KeyN', 'M': 'KeyM', 'T': 'KeyT',
+    'Y': 'KeyY', 'U': 'KeyU', 'I': 'KeyI', 'O': 'KeyO', 'P': 'KeyP',
+  };
+  
+  // UI elements
+  private letterSquare: Phaser.GameObjects.Rectangle | null = null;
+  private letterText: Phaser.GameObjects.Text | null = null;
+  private shrinkingSquare: Phaser.GameObjects.Rectangle | null = null;
+  private initialSquareSize: number = 80; // Starting size of shrinking square (smaller)
+  private targetSquareSize: number = 40; // Size of letter square (target, smaller)
   
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
   
-  start(onSuccess: () => void, onFail: () => void): void {
+  start(onComplete: (result: 'perfect' | 'close' | 'miss') => void): void {
     if (this.isActive) return;
     
     this.isActive = true;
-    this.timer = this.duration;
-    this.keyChangeTimer = 0;
-    this.onSuccess = onSuccess;
-    this.onFail = onFail;
+    this.state = SkillCheckState.SHOWING_LETTER;
+    this.timer = 0;
+    this.onComplete = onComplete;
     
+    // Pick random key
     this.requiredKey = this.KEYS[Math.floor(Math.random() * this.KEYS.length)];
+    this.requiredKeyCode = this.KEY_CODES[this.requiredKey];
+    
     this.createUI();
     
     // Setup input - listen continuously while active
@@ -48,88 +74,136 @@ export class SkillCheck {
   update(dt: number, player: Player): void {
     if (!this.isActive) return;
     
-    this.timer -= dt;
-    this.keyChangeTimer += dt;
+    // Check if player died
+    if (player.isDead) {
+      this.stop();
+      return;
+    }
     
-    // Change key periodically to make it harder
-    if (this.keyChangeTimer >= C.SKILL_CHECK_KEY_CHANGE_INTERVAL) {
-      this.keyChangeTimer = 0;
-      const oldKey = this.requiredKey;
-      while (this.requiredKey === oldKey) {
-        this.requiredKey = this.KEYS[Math.floor(Math.random() * this.KEYS.length)];
+    this.timer += dt;
+    const currentTime = this.scene.time.now;
+    
+    if (this.state === SkillCheckState.SHOWING_LETTER) {
+      // Show letter for 1.5 seconds
+      if (this.timer >= this.letterShowDuration) {
+        this.state = SkillCheckState.SHRINKING;
+        this.timer = 0;
+        this.startShrinkingAnimation();
+        // Calculate perfect moment time (when shrink animation completes)
+        // Perfect moment is when square reaches target size (at end of shrink)
+        this.perfectMomentTime = currentTime + (this.shrinkDuration * 1000);
       }
-      this.updateUI();
-    }
-    
-    // Update timer visual
-    if (this.container) {
-      const progress = this.timer / this.duration;
-      const timerBar = this.container.list.find((obj: any) => obj.name === 'timerBar') as Phaser.GameObjects.Rectangle;
-      if (timerBar) {
-        timerBar.setScale(progress, 1);
-        timerBar.setFillStyle(
-          progress > 0.5 ? C.COLOR_SKILL_CHECK_SUCCESS :
-          progress > 0.25 ? C.COLOR_SKILL_CHECK :
-          C.COLOR_SKILL_CHECK_FAIL
-        );
+    } else if (this.state === SkillCheckState.SHRINKING) {
+      // Square is shrinking
+      const progress = Math.min(1.0, this.timer / this.shrinkDuration);
+      
+      // Update shrinking square size
+      if (this.shrinkingSquare) {
+        const currentSize = this.initialSquareSize - (this.initialSquareSize - this.targetSquareSize) * progress;
+        this.shrinkingSquare.setSize(currentSize, currentSize);
+        
+        // Color: Red during shrinking (too early)
+        this.shrinkingSquare.setFillStyle(0xff0000, 0.3);
+        this.shrinkingSquare.setStrokeStyle(3, 0xff0000, 0.8);
+      }
+      
+      if (progress >= 1.0) {
+        // Shrinking complete - perfect moment reached, now waiting for input
+        this.state = SkillCheckState.WAITING_INPUT;
+        this.timer = 0;
+        
+        // Change to green at perfect moment
+        if (this.shrinkingSquare) {
+          this.shrinkingSquare.setFillStyle(0x00ff00, 0.3);
+          this.shrinkingSquare.setStrokeStyle(3, 0x00ff00, 0.8);
+        }
+        
+        // Start timeout - if no input within 0.3s after perfect moment, it's a miss (harder)
+        this.scene.time.delayedCall(300, () => {
+          if (this.state === SkillCheckState.WAITING_INPUT) {
+            this.handleResult('miss');
+          }
+        });
+      }
+    } else if (this.state === SkillCheckState.WAITING_INPUT) {
+      // Waiting for input - update color based on timing
+      const currentTime = this.scene.time.now;
+      const timeSincePerfect = currentTime - this.perfectMomentTime;
+      
+      if (this.shrinkingSquare) {
+        if (timeSincePerfect <= 50) {
+          // Perfect window (0-50ms) - GREEN
+          this.shrinkingSquare.setFillStyle(0x00ff00, 0.3);
+          this.shrinkingSquare.setStrokeStyle(3, 0x00ff00, 0.8);
+        } else if (timeSincePerfect <= 150) {
+          // Close window (50-150ms) - GRAY (no effect)
+          this.shrinkingSquare.setFillStyle(0x808080, 0.3);
+          this.shrinkingSquare.setStrokeStyle(3, 0x808080, 0.8);
+        } else {
+          // Too late (150ms+) - RED
+          this.shrinkingSquare.setFillStyle(0xff0000, 0.3);
+          this.shrinkingSquare.setStrokeStyle(3, 0xff0000, 0.8);
+        }
       }
     }
-    
-    // Time ran out - fail
-    if (this.timer <= 0) {
-      this.fail();
-    }
+    // WAITING_INPUT state - just waiting for key press
   }
   
   private handleKeyPress(event: KeyboardEvent): void {
     if (!this.isActive) return;
     
-    // Ignore movement/action keys - these don't count as wrong
-    const ignoredKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyE'];
+    // Ignore movement/action keys - these don't count
+    const ignoredKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyE', 'KeyG'];
     if (ignoredKeys.includes(event.code)) {
-      return; // Just ignore these keys, don't fail
+      return;
     }
     
-    const pressedKey = this.getKeyName(event.code);
-    
-    // If key is not in our skill check key list, ignore it
-    if (!pressedKey || !this.KEYS.includes(pressedKey)) {
-      return; // Not a skill check key, ignore
+    // Only accept the required key
+    if (event.code !== this.requiredKeyCode) {
+      return; // Wrong key, ignore
     }
     
-    if (pressedKey === this.requiredKey) {
-      this.success();
-    } else {
-      // Wrong skill check key - instant fail
-      this.fail();
+    // Key pressed - check timing (harder windows)
+    if (this.state === SkillCheckState.SHRINKING || this.state === SkillCheckState.WAITING_INPUT) {
+      this.keyPressTime = this.scene.time.now;
+      const timeDiff = Math.abs(this.keyPressTime - this.perfectMomentTime);
+      
+      if (timeDiff <= 50) {
+        // Perfect timing (within 50ms - harder!)
+        this.handleResult('perfect');
+      } else if (timeDiff <= 150) {
+        // Close but not perfect (50-150ms - tighter window)
+        this.handleResult('close');
+      } else {
+        // Miss (outside 150ms - stricter)
+        this.handleResult('miss');
+      }
     }
   }
   
-  private getKeyName(code: string): string {
-    const keyMap: Record<string, string> = {
-      'KeyQ': 'Q',
-      'KeyR': 'R',
-      'KeyF': 'F',
-      'KeyG': 'G',
-      'KeyH': 'H',
-      'KeyJ': 'J',
-      'KeyK': 'K',
-      'KeyL': 'L',
-      'KeyZ': 'Z',
-      'KeyX': 'X',
-      'KeyC': 'C',
-      'KeyV': 'V',
-      'KeyB': 'B',
-      'KeyN': 'N',
-      'KeyM': 'M',
-      'KeyT': 'T',
-      'KeyY': 'Y',
-      'KeyU': 'U',
-      'KeyI': 'I',
-      'KeyO': 'O',
-      'KeyP': 'P',
-    };
-    return keyMap[code] || '';
+  private handleResult(result: 'perfect' | 'close' | 'miss'): void {
+    if (this.state === SkillCheckState.COMPLETE) return;
+    
+    this.state = SkillCheckState.COMPLETE;
+    
+    // Remove key listener
+    if (this.keyHandler) {
+      this.scene.input.keyboard!.off('keydown', this.keyHandler);
+      this.keyHandler = null;
+    }
+    
+    // Show result
+    this.showResult(result);
+    
+    // Call completion callback
+    if (this.onComplete) {
+      this.onComplete(result);
+    }
+    
+    // Clean up after delay
+    this.scene.time.delayedCall(1000, () => {
+      this.stop();
+    });
   }
   
   private createUI(): void {
@@ -137,165 +211,91 @@ export class SkillCheck {
       this.container.destroy();
     }
     
-    this.container = this.scene.add.container(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
+    // Position at 3/4 of screen height (75% down from top, or 25% from bottom)
+    const posX = C.ARENA_WIDTH / 2;
+    const posY = C.ARENA_HEIGHT * 0.75; // 75% from top (3/4 of screen)
+    
+    this.container = this.scene.add.container(posX, posY);
     this.container.setDepth(500);
     this.container.setScrollFactor(0);
     
-    // Background
-    const bg = this.scene.add.rectangle(0, 0, 300, 150, 0x000000, 0.9);
-    bg.setStrokeStyle(3, C.COLOR_SKILL_CHECK, 1);
-    this.container.add(bg);
+    // NO background box - just the squares
+    // NO title text
+    // NO instruction text
+    // Just the letter square, letter text, and shrinking square
     
-    // Title
-    const title = this.scene.add.text(0, -50, 'SKILL CHECK!', {
-      fontSize: '24px',
-      fontFamily: 'monospace',
-      color: `#${C.COLOR_SKILL_CHECK.toString(16).padStart(6, '0')}`,
-      stroke: '#000000',
-      strokeThickness: 3,
-    });
-    title.setOrigin(0.5);
-    this.container.add(title);
+    // Letter square (target size) - smaller
+    this.letterSquare = this.scene.add.rectangle(0, 0, this.targetSquareSize, this.targetSquareSize, 0x333333);
+    this.letterSquare.setStrokeStyle(2, C.COLOR_SKILL_CHECK, 1);
+    this.letterSquare.setOrigin(0.5);
+    this.container.add(this.letterSquare);
     
-    // Key prompt
-    const keyText = this.scene.add.text(0, 0, `PRESS: ${this.requiredKey}`, {
+    // Letter text - smaller
+    this.letterText = this.scene.add.text(0, 0, this.requiredKey, {
       fontSize: '32px',
       fontFamily: 'monospace',
       color: '#ffffff',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 3,
     });
-    keyText.setOrigin(0.5);
-    keyText.name = 'keyText';
-    this.container.add(keyText);
+    this.letterText.setOrigin(0.5);
+    this.container.add(this.letterText);
     
-    // Timer bar background
-    const timerBg = this.scene.add.rectangle(0, 40, 250, 8, 0x333333);
-    timerBg.setOrigin(0.5);
-    this.container.add(timerBg);
-    
-    // Timer bar
-    const timerBar = this.scene.add.rectangle(-125, 40, 250, 8, C.COLOR_SKILL_CHECK_SUCCESS);
-    timerBar.setOrigin(0, 0.5);
-    timerBar.name = 'timerBar';
-    this.container.add(timerBar);
-    
-    // Warning text
-    const warning = this.scene.add.text(0, 60, 'Keys change rapidly!', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#ffaa00',
-    });
-    warning.setOrigin(0.5);
-    this.container.add(warning);
+    // Shrinking square (starts larger, hidden initially) - starts RED (too early)
+    this.shrinkingSquare = this.scene.add.rectangle(0, 0, this.initialSquareSize, this.initialSquareSize, 0xff0000, 0.3);
+    this.shrinkingSquare.setStrokeStyle(3, 0xff0000, 0.8);
+    this.shrinkingSquare.setOrigin(0.5);
+    this.shrinkingSquare.setVisible(false);
+    this.container.add(this.shrinkingSquare);
   }
   
-  private updateUI(): void {
+  private startShrinkingAnimation(): void {
+    if (this.shrinkingSquare) {
+      this.shrinkingSquare.setVisible(true);
+      this.shrinkingSquare.setSize(this.initialSquareSize, this.initialSquareSize);
+    }
+  }
+  
+  private showResult(result: 'perfect' | 'close' | 'miss'): void {
     if (!this.container) return;
     
-    const keyText = this.container.list.find((obj: any) => obj.name === 'keyText') as Phaser.GameObjects.Text;
-    if (keyText) {
-      keyText.setText(`PRESS: ${this.requiredKey}`);
-      // Flash effect
-      this.scene.tweens.add({
-        targets: keyText,
-        scale: { from: 1.2, to: 1 },
-        duration: 100,
-      });
-    }
-  }
-  
-  private success(): void {
-    if (!this.isActive) return;
+    let resultText: string;
+    let color: number;
     
-    // Remove key listener
-    if (this.keyHandler) {
-      this.scene.input.keyboard!.off('keydown', this.keyHandler);
-      this.keyHandler = null;
+    if (result === 'perfect') {
+      resultText = 'PERFECT! +30 HP';
+      color = C.COLOR_SKILL_CHECK_SUCCESS;
+    } else if (result === 'close') {
+      resultText = 'CLOSE - No effect';
+      color = 0xffaa00; // Orange
+    } else {
+      resultText = 'MISS! -20 HP';
+      color = C.COLOR_SKILL_CHECK_FAIL;
     }
     
-    this.isActive = false;
-    
-    // Success effect
-    if (this.container) {
-      const bg = this.container.list[0] as Phaser.GameObjects.Rectangle;
-      bg.setStrokeStyle(3, C.COLOR_SKILL_CHECK_SUCCESS, 1);
-      
-      const successText = this.scene.add.text(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2 - 20, 'SUCCESS!', {
-        fontSize: '28px',
-        fontFamily: 'monospace',
-        color: `#${C.COLOR_SKILL_CHECK_SUCCESS.toString(16).padStart(6, '0')}`,
-        stroke: '#000000',
-        strokeThickness: 3,
-      });
-      successText.setOrigin(0.5);
-      successText.setDepth(501);
-      successText.setScrollFactor(0);
-      
-      this.scene.tweens.add({
-        targets: successText,
-        alpha: 0,
-        y: successText.y - 30,
-        duration: 500,
-        onComplete: () => successText.destroy(),
-      });
+    // Hide shrinking square
+    if (this.shrinkingSquare) {
+      this.shrinkingSquare.setVisible(false);
     }
     
-    this.scene.time.delayedCall(300, () => {
-      if (this.container) {
-        this.container.destroy();
-        this.container = null;
-      }
-      if (this.onSuccess) {
-        this.onSuccess();
-      }
+    // Show result text
+    const resultDisplay = this.scene.add.text(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2 + 40, resultText, {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      color: `#${color.toString(16).padStart(6, '0')}`,
+      stroke: '#000000',
+      strokeThickness: 3,
     });
-  }
-  
-  private fail(): void {
-    if (!this.isActive) return;
+    resultDisplay.setOrigin(0.5);
+    resultDisplay.setDepth(501);
+    resultDisplay.setScrollFactor(0);
     
-    // Remove key listener
-    if (this.keyHandler) {
-      this.scene.input.keyboard!.off('keydown', this.keyHandler);
-      this.keyHandler = null;
-    }
-    
-    this.isActive = false;
-    
-    // Fail effect
-    if (this.container) {
-      const bg = this.container.list[0] as Phaser.GameObjects.Rectangle;
-      bg.setStrokeStyle(3, C.COLOR_SKILL_CHECK_FAIL, 1);
-      
-      const failText = this.scene.add.text(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2 - 20, 'FAILED!', {
-        fontSize: '28px',
-        fontFamily: 'monospace',
-        color: `#${C.COLOR_SKILL_CHECK_FAIL.toString(16).padStart(6, '0')}`,
-        stroke: '#000000',
-        strokeThickness: 3,
-      });
-      failText.setOrigin(0.5);
-      failText.setDepth(501);
-      failText.setScrollFactor(0);
-      
-      this.scene.tweens.add({
-        targets: failText,
-        alpha: 0,
-        scale: 1.5,
-        duration: 500,
-        onComplete: () => failText.destroy(),
-      });
-    }
-    
-    this.scene.time.delayedCall(300, () => {
-      if (this.container) {
-        this.container.destroy();
-        this.container = null;
-      }
-      if (this.onFail) {
-        this.onFail();
-      }
+    this.scene.tweens.add({
+      targets: resultDisplay,
+      alpha: 0,
+      y: resultDisplay.y - 20,
+      duration: 800,
+      onComplete: () => resultDisplay.destroy(),
     });
   }
   
@@ -310,7 +310,12 @@ export class SkillCheck {
       this.container.destroy();
       this.container = null;
     }
+    
+    this.letterSquare = null;
+    this.letterText = null;
+    this.shrinkingSquare = null;
     this.isActive = false;
+    this.state = SkillCheckState.SHOWING_LETTER;
   }
   
   get active(): boolean {

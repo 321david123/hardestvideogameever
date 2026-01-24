@@ -51,8 +51,10 @@ export class ArenaEffects {
     this.phase = phase;
     
     if (phase === 2) {
-      // Initialize rain for Phase 2
-      this.initRain();
+      // Initialize rain for Phase 2 - only if not already initialized
+      if (this.rainDrops.length === 0) {
+        this.initRain();
+      }
     } else {
       // Clear rain for Phase 1 - also clear graphics
       this.rainDrops = [];
@@ -61,8 +63,12 @@ export class ArenaEffects {
   }
   
   private initRain(): void {
-    // Create rain drops - even less for better visibility
-    for (let i = 0; i < 25; i++) { // Reduced to 25 drops
+    // Clear any existing drops first
+    this.rainDrops = [];
+    
+    // Create fixed number of rain drops - they loop, don't accumulate
+    const RAIN_DROP_COUNT = 25;
+    for (let i = 0; i < RAIN_DROP_COUNT; i++) {
       this.rainDrops.push({
         x: randomRange(0, C.ARENA_WIDTH),
         y: randomRange(-C.ARENA_HEIGHT, 0),
@@ -192,7 +198,9 @@ export class ArenaEffects {
   
   private updateChillEffects(dt: number): void {
     // Phase 1 - calm floating particles throughout the arena
-    if (Math.random() < 0.08) {
+    // Limit particles to prevent accumulation
+    const MAX_PARTICLES = 100;
+    if (this.particles.length < MAX_PARTICLES && Math.random() < 0.08) {
       // Spawn from anywhere in the arena, not just bottom
       const spawnFromBottom = Math.random() < 0.3; // 30% from bottom, 70% from anywhere
       
@@ -233,7 +241,7 @@ export class ArenaEffects {
       p.vy *= 0.98;
       p.life -= dt;
       
-      if (p.life <= 0 || p.y < -10) {
+      if (p.life <= 0 || p.y < -10 || p.y > C.ARENA_HEIGHT + 50) {
         this.particles.splice(i, 1);
         continue;
       }
@@ -244,8 +252,15 @@ export class ArenaEffects {
       this.particleGraphics.fillCircle(p.x, p.y, size);
     }
     
-    // Phase 2 ambient particles
-    if (this.phase === 2 && Math.random() < 0.1) {
+    // Limit total particles to prevent accumulation
+    const MAX_PARTICLES = 100;
+    if (this.particles.length > MAX_PARTICLES) {
+      // Remove oldest particles (first in array)
+      this.particles.splice(0, this.particles.length - MAX_PARTICLES);
+    }
+    
+    // Phase 2 ambient particles - only spawn if under limit
+    if (this.phase === 2 && this.particles.length < MAX_PARTICLES && Math.random() < 0.1) {
       this.spawnAmbientParticle();
     }
   }
