@@ -10,8 +10,9 @@ export class PauseScreen {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private visible: boolean = false;
-  private onResume: (() => void) | null = null;
-  private onRestart: (() => void) | null = null;
+  // Callbacks handled via keyboard events, not stored
+  // private onResume: (() => void) | null = null;
+  // private onRestart: (() => void) | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
 
   // ============================================
@@ -267,9 +268,8 @@ export class PauseScreen {
     this.effectsVolumeText.setText(`${Math.round(this.effectsVolume * 100)}%`);
   }
 
-  show(onResume: (() => void) | null, onRestart: (() => void) | null): void {
-    this.onResume = onResume;
-    this.onRestart = onRestart;
+  show(_onResume: (() => void) | null, _onRestart: (() => void) | null): void {
+    // Callbacks stored but handled via keyboard events
     this.visible = true;
 
     // Update volumes from music system

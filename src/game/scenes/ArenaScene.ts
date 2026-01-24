@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Void } from '../entities/Void';
+import { Entity } from '../entities/Entity';
 import { CombatSystem, HitResult } from '../systems/Combat';
 import { EffectsSystem } from '../systems/Effects';
 import { CollisionSystem } from '../systems/Collision';
@@ -71,8 +72,8 @@ export class ArenaScene extends Phaser.Scene {
     this.combat = new CombatSystem(this.player, this.void_);
     this.combat.setCallbacks(
       (result) => this.onHit(result),
-      (defender, attacker) => this.onParry(defender, attacker),
-      (killed, killer) => this.onKill(killed, killer),
+      (defender, attacker) => this.onParry(defender as any, attacker as any),
+      (killed, killer) => this.onKill(killed as any, killer as any),
       () => {}
     );
     
@@ -275,9 +276,9 @@ export class ArenaScene extends Phaser.Scene {
     this.effects.triggerScreenShake(C.SCREEN_SHAKE_HIT * 1.5);
   }
   
-  private onKill(killed: Phaser.GameObjects.GameObject, _killer: Phaser.GameObjects.GameObject): void {
+  private onKill(killed: Entity, _killer: Entity): void {
     const killedEntity = killed as unknown as { pos: Vec2 };
-    const isPlayer = killed === this.player;
+    const isPlayer = killed === (this.player as any);
     
     this.gameOver = true;
     
@@ -297,7 +298,7 @@ export class ArenaScene extends Phaser.Scene {
         hitsLanded: this.combat.stats.playerHitsLanded,
         lowestVoidHp: this.combat.stats.voidLowestHp,
         playerParries: this.combat.stats.playerParries,
-        playerWon: killed === this.void_,
+        playerWon: killed === (this.void_ as any),
       };
       
       this.deathScreen.show(stats, () => this.restart());
@@ -490,11 +491,6 @@ export class ArenaScene extends Phaser.Scene {
     // Multi-laser hit detection
     if (this.void_.isMultiLaserActive) {
       for (const dir of this.void_.multiLaserDirections) {
-        const endPoint = {
-          x: this.void_.pos.x + dir.x * C.VOID_LASER_RANGE,
-          y: this.void_.pos.y + dir.y * C.VOID_LASER_RANGE,
-        };
-        
         // Check if player is in any laser
         const toPlayer = {
           x: this.player.pos.x - this.void_.pos.x,
@@ -550,7 +546,7 @@ export class ArenaScene extends Phaser.Scene {
           const knockback = scale(knockbackDir, 500);
           this.player.takeDamage(C.VOID_PHASE2_ARENA_WIPE_DAMAGE, knockback);
           this.effects.triggerScreenShake(30, 0.5);
-          this.showWarning(C.COLOR_WARNING_ARENA_WIPE, 0.3, 20);
+          this.showVisualWarning(C.COLOR_WARNING_ARENA_WIPE, 0.3);
         }
       }
       
@@ -731,11 +727,10 @@ export class ArenaScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-ESC', this.escKeyHandler);
   }
   
-  private resume(): void {
-    // Este método ya no se usa directamente, se llama desde finishResume
-    // Pero lo mantenemos por compatibilidad
-    this.finishResume();
-  }
+  // Unused method - kept for potential future use
+  // private resumeGame(): void {
+  //   this.finishResume();
+  // }
   
   private restartFromPause(): void {
     // Limpiar handlers

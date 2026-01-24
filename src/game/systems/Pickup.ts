@@ -3,7 +3,7 @@
  */
 
 import Phaser from 'phaser';
-import { Vec2, vec2, distance, randomRange } from '../utils/math';
+import { Vec2, distance, randomRange } from '../utils/math';
 import { Player } from '../entities/Player';
 import * as C from '../utils/constants';
 

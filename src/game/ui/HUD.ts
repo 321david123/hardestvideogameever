@@ -11,33 +11,33 @@ import * as C from '../utils/constants';
 export class HUD {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
-  private bossNameTween: Phaser.Tweens.Tween | null = null;
+  // private bossNameTween: Phaser.Tweens.Tween | null = null; // Unused
   
   // Player HP
-  private playerHpBar: Phaser.GameObjects.Graphics;
-  private playerHpText: Phaser.GameObjects.Text;
+  private playerHpBar!: Phaser.GameObjects.Graphics;
+  private playerHpText!: Phaser.GameObjects.Text;
   
   // Player Shield Bar
-  private shieldBar: Phaser.GameObjects.Graphics;
-  private shieldBarBg: Phaser.GameObjects.Rectangle;
-  private shieldText: Phaser.GameObjects.Text;
+  private shieldBar!: Phaser.GameObjects.Graphics;
+  private shieldBarBg!: Phaser.GameObjects.Rectangle;
+  private shieldText!: Phaser.GameObjects.Text;
   
   // Boss HP - Dark Souls style
-  private bossContainer: Phaser.GameObjects.Container;
-  private bossHpBarBg: Phaser.GameObjects.Rectangle;
-  private bossHpBar: Phaser.GameObjects.Graphics;
-  private bossNameText: Phaser.GameObjects.Text;
-  private bossHpText: Phaser.GameObjects.Text;
+  private bossContainer!: Phaser.GameObjects.Container;
+  private bossHpBarBg!: Phaser.GameObjects.Rectangle;
+  private bossHpBar!: Phaser.GameObjects.Graphics;
+  private bossNameText!: Phaser.GameObjects.Text;
+  private bossHpText!: Phaser.GameObjects.Text;
   
   // Cooldown indicators
-  private playerCooldowns: Phaser.GameObjects.Graphics;
+  private playerCooldowns!: Phaser.GameObjects.Graphics;
   
   // Pickup indicator
-  private pickupIndicator: Phaser.GameObjects.Container;
-  private pickupChargesText: Phaser.GameObjects.Text;
+  private pickupIndicator!: Phaser.GameObjects.Container;
+  private pickupChargesText!: Phaser.GameObjects.Text;
   
   // Timer
-  private timerText: Phaser.GameObjects.Text;
+  private timerText!: Phaser.GameObjects.Text;
   private elapsedTime: number = 0;
   
   private readonly PLAYER_BAR_WIDTH = 160;
@@ -379,7 +379,6 @@ export class HUD {
     this.playerCooldowns.clear();
     
     // Just Dash and Attack (Shield has its own bar now)
-    const labels = ['DASH', 'ATK'];
     const colors = [0x4fd1c5, C.COLOR_DAMAGE];
     const cooldowns = [player.dashCooldown, player.attackCooldown];
     

@@ -195,11 +195,13 @@ export class MusicSystem {
     }
   }
 
-  private playNoise(duration: number, volume: number = this.soundVolume): void {
+  // Unused method - kept for potential future use
+  /*
+  private playNoise(_duration: number, _volume: number = this.soundVolume): void {
     if (!this.audioContext || this.effectsVolume === 0) return;
 
     try {
-      const bufferSize = this.audioContext.sampleRate * duration;
+      const bufferSize = this.audioContext.sampleRate * _duration;
       const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
       const data = buffer.getChannelData(0);
 
@@ -214,17 +216,18 @@ export class MusicSystem {
       source.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
 
-      const finalVolume = volume * 0.3 * this.effectsVolume;
+      const finalVolume = _volume * 0.3 * this.effectsVolume;
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
       gainNode.gain.linearRampToValueAtTime(finalVolume, this.audioContext.currentTime + 0.01);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + _duration);
 
       source.start();
-      source.stop(this.audioContext.currentTime + duration);
+      source.stop(this.audioContext.currentTime + _duration);
     } catch (e) {
       // Silently fail
     }
   }
+  */
 
   intensify(): void {}
 

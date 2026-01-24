@@ -7,7 +7,7 @@
 import Phaser from 'phaser';
 import { Entity, EntityState } from './Entity';
 import { Player, PlayerActionData } from './Player';
-import { Vec2, vec2, sub, normalize, length, distance, scale, add, fromAngle, randomRange, angle } from '../utils/math';
+import { Vec2, vec2, sub, normalize, length, distance, scale, add, fromAngle, randomRange } from '../utils/math';
 import { Timer, Cooldown } from '../utils/timer';
 import * as C from '../utils/constants';
 import { music } from '../systems/Music';
@@ -89,7 +89,7 @@ export class Void extends Entity {
   public teleportTimer: Timer = new Timer(C.VOID_TELEPORT_TELEGRAPH);
   public isTeleporting: boolean = false;
   public teleportTarget: Vec2 = vec2();
-  private teleportPhase: 'out' | 'in' = 'out';
+  public teleportPhase: 'out' | 'in' = 'out';
   
   // Visual elements for special attacks
   public laserGraphics: Phaser.GameObjects.Graphics;
@@ -263,16 +263,16 @@ export class Void extends Entity {
     
     // Handle special attack states
     console.log('Void: updateSpecialAttacks');
-    this.updateSpecialAttacks(dt);
+    this.updateSpecialAttacks();
     
     // Phase 2 new attacks
     if (this.phase === 2) {
-      this.updatePhase2Attacks(dt);
+      this.updatePhase2Attacks();
     }
     
     // Handle teleport
     console.log('Void: updateTeleport');
-    this.updateTeleport(dt);
+    this.updateTeleport();
     
     // AI decision making (if not in special attack)
     if (this.player && this.canMakeDecision() && !this.isArenaWipeCharging) {
@@ -285,7 +285,7 @@ export class Void extends Entity {
     // Execute current state behavior (but stop if charging arena wipe)
     if (!this.isArenaWipeCharging) {
       console.log('Void: executeState');
-      this.executeState(dt);
+      this.executeState();
     } else {
       // Stop movement during arena wipe charge
       this.vel = vec2();
@@ -326,7 +326,7 @@ export class Void extends Entity {
     );
   }
   
-  private updateSpecialAttacks(dt: number): void {
+  private updateSpecialAttacks(): void {
     // LASER charging
     if (this.isLaserCharging) {
       if (this.laserChargeTimer.done) {
@@ -386,7 +386,7 @@ export class Void extends Entity {
     }
   }
   
-  private updatePhase2Attacks(dt: number): void {
+  private updatePhase2Attacks(): void {
     // Multi-laser
     if (this.isMultiLaserActive) {
       if (this.multiLaserTimer.done) {
@@ -425,7 +425,7 @@ export class Void extends Entity {
     }
   }
   
-  private updateTeleport(dt: number): void {
+  private updateTeleport(): void {
     if (!this.isTeleporting) return;
     
     if (this.teleportPhase === 'out') {
@@ -1039,7 +1039,7 @@ export class Void extends Entity {
     }
   }
   
-  private decideNextState(dist: number, playerData: PlayerActionData): void {
+  private decideNextState(dist: number, _playerData: PlayerActionData): void {
     const scores: Record<string, number> = {
       observe: 0,
       probe: 0,
@@ -1132,7 +1132,7 @@ export class Void extends Entity {
     this.pendingAction = action;
   }
   
-  private executeState(dt: number): void {
+  private executeState(): void {
     if (!this.player) return;
     if (!this.canMakeDecision()) return;
     

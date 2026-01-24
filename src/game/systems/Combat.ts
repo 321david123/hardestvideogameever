@@ -5,7 +5,7 @@
 import { Entity } from '../entities/Entity';
 import { Player } from '../entities/Player';
 import { Void } from '../entities/Void';
-import { Vec2, distance, sub, normalize, scale, angle, isAngleInArc, dot, vec2 } from '../utils/math';
+import { Vec2, distance, sub, normalize, scale, angle, isAngleInArc, dot } from '../utils/math';
 import * as C from '../utils/constants';
 
 export interface HitResult {

@@ -236,7 +236,7 @@ export class Player extends Entity {
     }
     
     // Visual facing: toward target
-    if (this.target && this.state !== 'dashing') {
+    if (this.target && !this.isDashing) {
       const toTarget = sub(this.target.pos, this.pos);
       if (length(toTarget) > 0) {
         this.facingAngle = Math.atan2(toTarget.y, toTarget.x);

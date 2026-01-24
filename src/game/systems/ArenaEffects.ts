@@ -196,7 +196,7 @@ export class ArenaEffects {
     });
   }
   
-  private updateChillEffects(dt: number): void {
+  private updateChillEffects(_dt: number): void {
     // Phase 1 - calm floating particles throughout the arena
     // Limit particles to prevent accumulation
     const MAX_PARTICLES = 100;

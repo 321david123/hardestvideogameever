@@ -3,7 +3,7 @@
  */
 
 import Phaser from 'phaser';
-import { Vec2, vec2, add, scale, normalize, length, fromAngle } from '../utils/math';
+import { Vec2, vec2, add, scale, normalize, length } from '../utils/math';
 import { Timer, Cooldown } from '../utils/timer';
 import * as C from '../utils/constants';
 
@@ -166,7 +166,7 @@ export abstract class Entity {
     }
   }
   
-  protected updateState(dt: number): void {
+  protected updateState(_dt: number): void {
     // Handle state timeouts
     if (this.state === 'dashing' && this.dashTimer.done) {
       this.state = 'idle';
