@@ -176,9 +176,9 @@ export class Void extends Entity {
     this.areaBlastGraphics = scene.add.graphics();
     this.areaBlastGraphics.setDepth(60);
     
-    // Arena wipe graphics
+    // Arena wipe graphics - set to low depth so player is visible above it
     this.arenaWipeGraphics = scene.add.graphics();
-    this.arenaWipeGraphics.setDepth(70);
+    this.arenaWipeGraphics.setDepth(-5); // Below player (depth 0) but above arena background (-10)
   }
   
   setPlayer(player: Player): void {
