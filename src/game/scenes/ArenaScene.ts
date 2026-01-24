@@ -615,58 +615,73 @@ export class ArenaScene extends Phaser.Scene {
     if (!this.isPaused || this.isResuming) return;
     
     this.isResuming = true;
-    this.resumeCountdown = 3; // Empezar en 3
+    // ============================================
+    // CONFIGURACIÓN DEL CONTADOR DE REANUDACIÓN
+    // ============================================
+    // MODIFICA: Cambia este valor para cambiar el tiempo del contador
+    // 3 = cuenta regresiva de 3, 2, 1 (3 segundos)
+    // 5 = cuenta regresiva de 5, 4, 3, 2, 1 (5 segundos)
+    // 1 = solo muestra "1" por 1 segundo
+    this.resumeCountdown = 3; // MODIFICA: Tiempo del contador en segundos
     
     // Ocultar menú de pausa
     this.pauseScreen.hide();
     
     // Crear texto de countdown
+    // ============================================
+    // CONFIGURACIÓN VISUAL DEL CONTADOR
+    // ============================================
     this.resumeCountdownText = this.add.text(
       C.ARENA_WIDTH / 2,
       C.ARENA_HEIGHT / 2,
-      '3',
+      '3', // Texto inicial (se actualiza automáticamente)
       {
-        fontSize: '120px',
+        // MODIFICA: Cambia el tamaño del texto del contador
+        fontSize: '120px', // MODIFICA: Tamaño de fuente (ej: '80px', '150px')
         fontFamily: 'monospace',
-        color: '#4fd1c5',
-        stroke: '#000000',
-        strokeThickness: 8,
+        // MODIFICA: Cambia el color del texto
+        color: '#4fd1c5', // MODIFICA: Color del contador (formato hexadecimal)
+        stroke: '#000000', // MODIFICA: Color del borde del texto
+        strokeThickness: 8, // MODIFICA: Grosor del borde (ej: 4, 12)
       }
     );
     this.resumeCountdownText.setOrigin(0.5);
     this.resumeCountdownText.setDepth(500);
     this.resumeCountdownText.setScrollFactor(0);
     
-    // Efecto de escala
-    this.resumeCountdownText.setScale(0.5);
+    // Efecto de escala (animación cuando aparece cada número)
+    // MODIFICA: Cambia estos valores para ajustar la animación
+    this.resumeCountdownText.setScale(0.5); // MODIFICA: Escala inicial (0.5 = 50% del tamaño)
     this.tweens.add({
       targets: this.resumeCountdownText,
-      scale: 1.5,
-      duration: 200,
-      yoyo: true,
-      ease: 'Back.easeOut',
+      scale: 1.5, // MODIFICA: Escala máxima (1.5 = 150% del tamaño)
+      duration: 200, // MODIFICA: Duración de la animación en ms (ej: 100, 300)
+      yoyo: true, // Hace que vuelva a la escala inicial
+      ease: 'Back.easeOut', // MODIFICA: Tipo de animación (ej: 'Linear', 'Bounce.easeOut')
     });
   }
   
   private updateResumeCountdown(delta: number): void {
     if (!this.isResuming || !this.resumeCountdownText) return;
     
-    // El countdown se actualiza cada segundo
-    // delta ya está en milisegundos según Phaser, convertir a segundos
+    // El countdown se actualiza cada frame
+    // delta está en milisegundos, convertir a segundos dividiendo por 1000
     const oldCount = Math.ceil(this.resumeCountdown);
-    this.resumeCountdown -= delta / 1000;
+    this.resumeCountdown -= delta / 1000; // Resta el tiempo transcurrido
+    
     const newCount = Math.ceil(this.resumeCountdown);
     
-    // Si cambió el número, actualizar visual
+    // Si cambió el número, actualizar visual y animar
     if (oldCount !== newCount && newCount > 0) {
       this.resumeCountdownText.setText(newCount.toString());
-      this.resumeCountdownText.setScale(0.5);
+      // MODIFICA: Estos valores deben coincidir con los de startResumeCountdown()
+      this.resumeCountdownText.setScale(0.5); // MODIFICA: Escala inicial
       this.tweens.add({
         targets: this.resumeCountdownText,
-        scale: 1.5,
-        duration: 200,
+        scale: 1.5, // MODIFICA: Escala máxima
+        duration: 200, // MODIFICA: Duración de animación en ms
         yoyo: true,
-        ease: 'Back.easeOut',
+        ease: 'Back.easeOut', // MODIFICA: Tipo de animación
       });
     }
     

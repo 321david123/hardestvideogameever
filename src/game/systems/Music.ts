@@ -11,10 +11,26 @@ export class MusicSystem {
   public audioPhase2: HTMLAudioElement | null = null;
   public currentAudio: HTMLAudioElement | null = null;
   private isPlaying: boolean = false;
-  private volume: number = 0.4;
+  
+  // ============================================
+  // CONFIGURACIÓN DE VOLUMEN - MODIFICA AQUÍ
+  // ============================================
+  // Volumen de música de fondo (0.0 a 1.0)
+  // 0.0 = silencioso, 1.0 = máximo volumen
+  // Este valor se puede cambiar desde el menú de pausa
+  private volume: number = 0.4; // 40% por defecto
+  
   private audioContext: AudioContext | null = null;
-  private soundVolume: number = 0.15; // Very subtle sound effects (15% volume)
-  private effectsVolume: number = 1.0; // Effects volume multiplier (0-1)
+  
+  // Volumen base de efectos de sonido (0.0 a 1.0)
+  // Este es el volumen base antes de aplicar el multiplicador de efectos
+  // 0.15 = 15% del volumen máximo (muy sutil)
+  private soundVolume: number = 0.15; // MODIFICA: Cambia este valor para ajustar el volumen base de efectos
+  
+  // Multiplicador de volumen de efectos (0.0 a 1.0)
+  // Este valor se puede cambiar desde el menú de pausa
+  // 0.0 = sin efectos, 1.0 = efectos al 100%
+  private effectsVolume: number = 1.0; // MODIFICA: Valor inicial de efectos (1.0 = 100%)
   
   constructor() {
     // Initialize Web Audio API for sound effects

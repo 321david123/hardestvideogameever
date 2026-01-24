@@ -14,15 +14,24 @@ export class PauseScreen {
   private onRestart: (() => void) | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
   
-  // Volume controls
+  // ============================================
+  // CONTROLES DE VOLUMEN - CONFIGURACIÓN
+  // ============================================
+  // Estos valores se cargan desde MusicSystem al iniciar
+  // Los sliders permiten ajustar de 0% a 100% (0.0 a 1.0)
   private musicVolumeSlider: Phaser.GameObjects.Rectangle | null = null;
   private effectsVolumeSlider: Phaser.GameObjects.Rectangle | null = null;
   private musicVolumeHandle: Phaser.GameObjects.Rectangle | null = null;
   private effectsVolumeHandle: Phaser.GameObjects.Rectangle | null = null;
   private musicVolumeText: Phaser.GameObjects.Text | null = null;
   private effectsVolumeText: Phaser.GameObjects.Text | null = null;
-  private musicVolume: number = 0.4;
-  private effectsVolume: number = 1.0;
+  
+  // Valores iniciales de volumen (0.0 a 1.0)
+  // Estos se sobrescriben con los valores de MusicSystem
+  // MODIFICA: Si quieres cambiar los valores por defecto, edita Music.ts
+  private musicVolume: number = 0.4; // 40% por defecto
+  private effectsVolume: number = 1.0; // 100% por defecto
+  
   private isDraggingMusic: boolean = false;
   private isDraggingEffects: boolean = false;
   
@@ -98,6 +107,8 @@ export class PauseScreen {
     this.container.add(musicLabel);
     
     // Music slider background
+    // MODIFICA: Cambia el ancho (300) para hacer el slider más largo o corto
+    // MODIFICA: Cambia la altura (8) para hacer la barra más gruesa o delgada
     const musicSliderBg = this.scene.add.rectangle(0, -20, 300, 8, 0x333333);
     musicSliderBg.setOrigin(0.5);
     musicSliderBg.setInteractive({ useHandCursor: true });
@@ -108,7 +119,9 @@ export class PauseScreen {
     this.container.add(musicSliderBg);
     this.musicVolumeSlider = musicSliderBg;
     
-    // Music slider handle
+    // Music slider handle (el círculo que arrastras)
+    // MODIFICA: Cambia el tamaño (16, 20) para hacer el handle más grande o pequeño
+    // MODIFICA: Cambia el color (0x4fd1c5) para cambiar el color del handle
     const musicHandle = this.scene.add.rectangle(
       -150 + (this.musicVolume * 300), -20,
       16, 20, 0x4fd1c5
@@ -218,15 +231,21 @@ export class PauseScreen {
     if (!this.musicVolumeSlider || !this.musicVolumeHandle || !this.musicVolumeText) return;
     
     const sliderX = this.musicVolumeSlider.x + this.container.x;
+    // MODIFICA: Cambia estos valores (150) si cambiaste el ancho del slider
+    // Debe ser la mitad del ancho del slider (300 / 2 = 150)
     const sliderLeft = sliderX - 150;
     const sliderRight = sliderX + 150;
     
     let newX = Phaser.Math.Clamp(pointer.x, sliderLeft, sliderRight);
+    // MODIFICA: Cambia este valor (300) si cambiaste el ancho del slider
     const normalized = (newX - sliderLeft) / 300;
     
+    // El volumen va de 0.0 (0%) a 1.0 (100%)
+    // El slider muestra el porcentaje de 0% a 100%
     this.musicVolume = Phaser.Math.Clamp(normalized, 0, 1);
     music.setVolume(this.musicVolume);
     
+    // MODIFICA: Cambia estos valores si cambiaste el ancho del slider
     this.musicVolumeHandle.setX(-150 + (this.musicVolume * 300));
     this.musicVolumeText.setText(`${Math.round(this.musicVolume * 100)}%`);
   }
