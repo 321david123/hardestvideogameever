@@ -14,6 +14,7 @@ import { ArenaEffects } from '../systems/ArenaEffects';
 import { music } from '../systems/Music';
 import { HUD } from '../ui/HUD';
 import { DeathScreen, GameStats } from '../ui/DeathScreen';
+import { PauseScreen } from '../ui/PauseScreen';
 import { Vec2, distance, normalize, scale } from '../utils/math';
 import * as C from '../utils/constants';
 
@@ -30,10 +31,19 @@ export class ArenaScene extends Phaser.Scene {
   
   private hud!: HUD;
   private deathScreen!: DeathScreen;
+  private pauseScreen!: PauseScreen;
   
   private gameOver: boolean = false;
+  private isPaused: boolean = false;
+  private isResuming: boolean = false; // Flag para el contador
+  private resumeCountdown: number = 0; // Contador 3, 2, 1
+  private resumeCountdownText: Phaser.GameObjects.Text | null = null;
   private musicInitialized: boolean = false;
   private phase2TransitionShown: boolean = false;
+  
+  // Event handlers para evitar múltiples registros
+  private escKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private rKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   
   private arenaGraphics!: Phaser.GameObjects.Graphics;
   private warningOverlay: Phaser.GameObjects.Rectangle | null = null;
@@ -70,21 +80,32 @@ export class ArenaScene extends Phaser.Scene {
     
     this.hud = new HUD(this);
     this.deathScreen = new DeathScreen(this);
+    this.pauseScreen = new PauseScreen(this);
     
     this.cameras.main.setBounds(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT);
     this.cameras.main.setBackgroundColor(C.COLOR_ARENA_BG);
     
     this.input.keyboard!.once('keydown', () => this.initMusic());
     
+    // Setup pause key (ESC) - usar handler reutilizable
+    this.escKeyHandler = () => {
+      if (!this.gameOver && !this.deathScreen.isVisible() && !this.isResuming) {
+        this.togglePause();
+      }
+    };
+    this.input.keyboard!.on('keydown-ESC', this.escKeyHandler);
+    
     this.gameOver = false;
+    this.isPaused = false;
+    this.isResuming = false;
+    this.resumeCountdown = 0;
   }
   
   private async initMusic(): Promise<void> {
-    // Music disabled - only sound effects remain
     if (this.musicInitialized) return;
     this.musicInitialized = true;
-    // await music.init();
-    // music.start();
+    await music.init();
+    music.start();
   }
   
   private createArena(): void {
@@ -124,7 +145,13 @@ export class ArenaScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.frameCount++;
     
-    if (this.gameOver) return;
+    // Handle resume countdown
+    if (this.isResuming) {
+      this.updateResumeCountdown(delta);
+      return;
+    }
+    
+    if (this.gameOver || this.isPaused) return;
     
     // Simple delta time - capped to prevent issues
     const dt = Math.min(delta, 50) / 1000;
@@ -348,8 +375,8 @@ export class ArenaScene extends Phaser.Scene {
       },
     });
     
-    // Music disabled - no phase 2 music switch
-    // music.switchToPhase2();
+    // Switch to Phase 2 music
+    music.switchToPhase2();
     
     // Restore player HP to Phase 2 amount
     this.player.stats.maxHp = C.PLAYER_HP_PHASE2;
@@ -540,21 +567,204 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
   
+  private togglePause(): void {
+    if (this.isPaused) {
+      this.startResumeCountdown();
+    } else {
+      this.pause();
+    }
+  }
+  
+  private pause(): void {
+    if (this.isPaused || this.gameOver || this.isResuming) return;
+    
+    this.isPaused = true;
+    music.pause(); // Pausar música cuando se pausa el juego
+    this.pauseScreen.show(
+      null, // No callback directo, usamos el handler de teclado
+      null  // No callback directo, usamos el handler de teclado
+    );
+    
+    // Setup input handlers cuando se muestra el menú de pausa
+    // Remover handlers anteriores si existen
+    if (this.escKeyHandler) {
+      this.input.keyboard!.off('keydown-ESC', this.escKeyHandler);
+    }
+    if (this.rKeyHandler) {
+      this.input.keyboard!.off('keydown-R', this.rKeyHandler);
+    }
+    
+    // Crear nuevos handlers
+    this.escKeyHandler = () => {
+      if (this.isPaused && this.pauseScreen.isVisible() && !this.isResuming) {
+        this.startResumeCountdown();
+      }
+    };
+    
+    this.rKeyHandler = () => {
+      if (this.isPaused && this.pauseScreen.isVisible() && !this.isResuming) {
+        this.restartFromPause();
+      }
+    };
+    
+    this.input.keyboard!.on('keydown-ESC', this.escKeyHandler);
+    this.input.keyboard!.on('keydown-R', this.rKeyHandler);
+  }
+  
+  private startResumeCountdown(): void {
+    if (!this.isPaused || this.isResuming) return;
+    
+    this.isResuming = true;
+    this.resumeCountdown = 3; // Empezar en 3
+    
+    // Ocultar menú de pausa
+    this.pauseScreen.hide();
+    
+    // Crear texto de countdown
+    this.resumeCountdownText = this.add.text(
+      C.ARENA_WIDTH / 2,
+      C.ARENA_HEIGHT / 2,
+      '3',
+      {
+        fontSize: '120px',
+        fontFamily: 'monospace',
+        color: '#4fd1c5',
+        stroke: '#000000',
+        strokeThickness: 8,
+      }
+    );
+    this.resumeCountdownText.setOrigin(0.5);
+    this.resumeCountdownText.setDepth(500);
+    this.resumeCountdownText.setScrollFactor(0);
+    
+    // Efecto de escala
+    this.resumeCountdownText.setScale(0.5);
+    this.tweens.add({
+      targets: this.resumeCountdownText,
+      scale: 1.5,
+      duration: 200,
+      yoyo: true,
+      ease: 'Back.easeOut',
+    });
+  }
+  
+  private updateResumeCountdown(delta: number): void {
+    if (!this.isResuming || !this.resumeCountdownText) return;
+    
+    // El countdown se actualiza cada segundo
+    // delta ya está en milisegundos según Phaser, convertir a segundos
+    const oldCount = Math.ceil(this.resumeCountdown);
+    this.resumeCountdown -= delta / 1000;
+    const newCount = Math.ceil(this.resumeCountdown);
+    
+    // Si cambió el número, actualizar visual
+    if (oldCount !== newCount && newCount > 0) {
+      this.resumeCountdownText.setText(newCount.toString());
+      this.resumeCountdownText.setScale(0.5);
+      this.tweens.add({
+        targets: this.resumeCountdownText,
+        scale: 1.5,
+        duration: 200,
+        yoyo: true,
+        ease: 'Back.easeOut',
+      });
+    }
+    
+    // Si llegó a 0, reanudar
+    if (this.resumeCountdown <= 0) {
+      this.finishResume();
+    }
+  }
+  
+  private finishResume(): void {
+    if (this.resumeCountdownText) {
+      this.tweens.add({
+        targets: this.resumeCountdownText,
+        alpha: 0,
+        scale: 2,
+        duration: 200,
+        onComplete: () => {
+          if (this.resumeCountdownText) {
+            this.resumeCountdownText.destroy();
+            this.resumeCountdownText = null;
+          }
+        },
+      });
+    }
+    
+    this.isPaused = false;
+    this.isResuming = false;
+    this.resumeCountdown = 0;
+    music.resume(); // Reanudar música cuando se reanuda el juego
+    
+    // Restaurar handler de ESC para pausar
+    if (this.escKeyHandler) {
+      this.input.keyboard!.off('keydown-ESC', this.escKeyHandler);
+    }
+    if (this.rKeyHandler) {
+      this.input.keyboard!.off('keydown-R', this.rKeyHandler);
+    }
+    
+    this.escKeyHandler = () => {
+      if (!this.gameOver && !this.deathScreen.isVisible() && !this.isResuming) {
+        this.togglePause();
+      }
+    };
+    this.input.keyboard!.on('keydown-ESC', this.escKeyHandler);
+  }
+  
+  private resume(): void {
+    // Este método ya no se usa directamente, se llama desde finishResume
+    // Pero lo mantenemos por compatibilidad
+    this.finishResume();
+  }
+  
+  private restartFromPause(): void {
+    // Limpiar handlers
+    if (this.escKeyHandler) {
+      this.input.keyboard!.off('keydown-ESC', this.escKeyHandler);
+    }
+    if (this.rKeyHandler) {
+      this.input.keyboard!.off('keydown-R', this.rKeyHandler);
+    }
+    
+    this.isPaused = false;
+    this.isResuming = false;
+    this.resumeCountdown = 0;
+    
+    if (this.resumeCountdownText) {
+      this.resumeCountdownText.destroy();
+      this.resumeCountdownText = null;
+    }
+    
+    this.pauseScreen.hide();
+    
+    // Restaurar handler de ESC
+    this.escKeyHandler = () => {
+      if (!this.gameOver && !this.deathScreen.isVisible() && !this.isResuming) {
+        this.togglePause();
+      }
+    };
+    this.input.keyboard!.on('keydown-ESC', this.escKeyHandler);
+    
+    this.restart();
+  }
+  
   private restart(): void {
     this.deathScreen.hide();
     
-    // Music disabled - no music reset needed
-    // if (music.currentAudio === music.audioPhase2) {
-    //   if (music.audioPhase2) {
-    //     music.audioPhase2.pause();
-    //     music.audioPhase2.currentTime = 0;
-    //   }
-    //   music.currentAudio = music.audioPhase1;
-    //   if (music.audioPhase1) {
-    //     music.audioPhase1.currentTime = 0;
-    //     music.audioPhase1.play().catch(() => {});
-    //   }
-    // }
+    // Reset music to Phase 1
+    if (music.currentAudio === music.audioPhase2) {
+      if (music.audioPhase2) {
+        music.audioPhase2.pause();
+        music.audioPhase2.currentTime = 0;
+      }
+      music.currentAudio = music.audioPhase1;
+      if (music.audioPhase1) {
+        music.audioPhase1.currentTime = 0;
+        music.audioPhase1.play().catch(() => {});
+      }
+    }
     
     // Reset player
     this.player.reset(250, C.ARENA_HEIGHT / 2);
@@ -576,7 +786,16 @@ export class ArenaScene extends Phaser.Scene {
     // Reset flags
     this.hideWarning();
     this.gameOver = false;
+    this.isPaused = false;
+    this.isResuming = false;
+    this.resumeCountdown = 0;
     this.phase2TransitionShown = false;
+    
+    // Limpiar countdown text si existe
+    if (this.resumeCountdownText) {
+      this.resumeCountdownText.destroy();
+      this.resumeCountdownText = null;
+    }
     
     // Clear any remaining arena wipe graphics
     if (this.void_.arenaWipeGraphics) {

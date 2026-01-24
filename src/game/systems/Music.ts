@@ -14,6 +14,7 @@ export class MusicSystem {
   private volume: number = 0.4;
   private audioContext: AudioContext | null = null;
   private soundVolume: number = 0.15; // Very subtle sound effects (15% volume)
+  private effectsVolume: number = 1.0; // Effects volume multiplier (0-1)
   
   constructor() {
     // Initialize Web Audio API for sound effects
@@ -98,9 +99,21 @@ export class MusicSystem {
     }
   }
   
+  setSoundEffectsVolume(volume: number): void {
+    this.effectsVolume = Math.max(0, Math.min(1, volume));
+  }
+  
+  getSoundEffectsVolume(): number {
+    return this.effectsVolume;
+  }
+  
+  getMusicVolume(): number {
+    return this.volume;
+  }
+  
   // Subtle sound effects using Web Audio API
   private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = this.soundVolume): void {
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.effectsVolume === 0) return;
     
     try {
       const oscillator = this.audioContext.createOscillator();
@@ -112,8 +125,9 @@ export class MusicSystem {
       oscillator.type = type;
       oscillator.frequency.value = frequency;
       
+      const finalVolume = volume * this.effectsVolume;
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(finalVolume, this.audioContext.currentTime + 0.01);
       gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
       
       oscillator.start(this.audioContext.currentTime);
@@ -124,7 +138,7 @@ export class MusicSystem {
   }
   
   private playNoise(duration: number, volume: number = this.soundVolume): void {
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.effectsVolume === 0) return;
     
     try {
       const bufferSize = this.audioContext.sampleRate * duration;
@@ -142,8 +156,9 @@ export class MusicSystem {
       source.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
       
+      const finalVolume = volume * 0.3 * this.effectsVolume;
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(volume * 0.3, this.audioContext.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(finalVolume, this.audioContext.currentTime + 0.01);
       gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
       
       source.start();
@@ -169,7 +184,7 @@ export class MusicSystem {
   
   playLaserCharge(): void {
     // Low rising hum
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.effectsVolume === 0) return;
     try {
       const oscillator = this.audioContext.createOscillator();
       const gainNode = this.audioContext.createGain();
@@ -181,8 +196,9 @@ export class MusicSystem {
       oscillator.frequency.setValueAtTime(100, this.audioContext.currentTime);
       oscillator.frequency.linearRampToValueAtTime(200, this.audioContext.currentTime + 0.3);
       
+      const finalVolume = this.soundVolume * 0.5 * this.effectsVolume;
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.soundVolume * 0.5, this.audioContext.currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(finalVolume, this.audioContext.currentTime + 0.05);
       gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
       
       oscillator.start();
@@ -198,7 +214,7 @@ export class MusicSystem {
   
   playTeleportSound(): void {
     // Brief whoosh - noise with frequency sweep
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.effectsVolume === 0) return;
     try {
       const oscillator = this.audioContext.createOscillator();
       const gainNode = this.audioContext.createGain();
@@ -210,8 +226,9 @@ export class MusicSystem {
       oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
       oscillator.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.15);
       
+      const finalVolume = this.soundVolume * 0.4 * this.effectsVolume;
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.soundVolume * 0.4, this.audioContext.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(finalVolume, this.audioContext.currentTime + 0.01);
       gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.15);
       
       oscillator.start();
