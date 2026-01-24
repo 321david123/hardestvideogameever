@@ -24,7 +24,7 @@ export const PLAYER_SPEED = 220;
 export const ENTITY_RADIUS = 16;
 
 // Void stats - OVERPOWERED
-export const VOID_HP = 20; // Dev mode - easy Phase 1
+export const VOID_HP = 100; // Phase 1 HP
 export const VOID_SPEED = 240; // Faster than player
 export const VOID_DAMAGE = 18; // Hits harder
 

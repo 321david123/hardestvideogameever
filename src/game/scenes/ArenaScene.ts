@@ -13,6 +13,7 @@ import { PickupSystem, PickupType } from '../systems/Pickup';
 import { SkillCheck } from '../systems/SkillCheck';
 import { ArenaEffects } from '../systems/ArenaEffects';
 import { music } from '../systems/Music';
+import { scoreboard } from '../systems/Scoreboard';
 import { HUD } from '../ui/HUD';
 import { DeathScreen, GameStats } from '../ui/DeathScreen';
 import { PauseScreen } from '../ui/PauseScreen';
@@ -100,6 +101,9 @@ export class ArenaScene extends Phaser.Scene {
     this.isPaused = false;
     this.isResuming = false;
     this.resumeCountdown = 0;
+    
+    // Record attempt in scoreboard
+    scoreboard.recordAttempt();
   }
   
   private async initMusic(): Promise<void> {

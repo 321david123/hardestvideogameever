@@ -7,6 +7,7 @@ import { Entity } from '../entities/Entity';
 import { Player } from '../entities/Player';
 import { Void } from '../entities/Void';
 import * as C from '../utils/constants';
+import { scoreboard } from '../systems/Scoreboard';
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -40,6 +41,11 @@ export class HUD {
   private timerText!: Phaser.GameObjects.Text;
   private elapsedTime: number = 0;
   
+  // Scoreboard
+  private scoreboardContainer!: Phaser.GameObjects.Container;
+  private attemptsText!: Phaser.GameObjects.Text;
+  private prizeText!: Phaser.GameObjects.Text;
+  
   private readonly PLAYER_BAR_WIDTH = 160;
   private readonly PLAYER_BAR_HEIGHT = 12;
   private readonly SHIELD_BAR_WIDTH = 120;
@@ -60,6 +66,7 @@ export class HUD {
     this.createCooldownIndicators();
     this.createPickupIndicator();
     this.createTimer();
+    this.createScoreboard();
   }
   
   private createPlayerHP(): void {
@@ -261,6 +268,7 @@ export class HUD {
     this.updateCooldowns(player);
     this.updatePickupIndicator(player);
     this.updateTimer();
+    this.updateScoreboard();
   }
   
   private updatePlayerHP(player: Player): void {
@@ -429,5 +437,66 @@ export class HUD {
   destroy(): void {
     this.container.destroy();
     this.bossContainer.destroy();
+    if (this.scoreboardContainer) {
+      this.scoreboardContainer.destroy();
+    }
+  }
+  
+  private createScoreboard(): void {
+    // Position in top-right corner
+    const x = C.ARENA_WIDTH - this.PADDING;
+    const y = this.PADDING + 10;
+    
+    this.scoreboardContainer = this.scene.add.container(x, y);
+    this.scoreboardContainer.setDepth(200);
+    this.scoreboardContainer.setScrollFactor(0);
+    
+    // Background
+    const bg = this.scene.add.rectangle(0, 0, 200, 60, 0x000000, 0.7);
+    bg.setOrigin(1, 0);
+    bg.setStrokeStyle(2, 0x4fd1c5, 0.8);
+    this.scoreboardContainer.add(bg);
+    
+    // Title
+    const title = this.scene.add.text(-10, -20, 'PRIZE POOL', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#4fd1c5',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    title.setOrigin(1, 0.5);
+    this.scoreboardContainer.add(title);
+    
+    // Attempts text
+    this.attemptsText = this.scene.add.text(-10, 0, '', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    });
+    this.attemptsText.setOrigin(1, 0.5);
+    this.scoreboardContainer.add(this.attemptsText);
+    
+    // Prize text
+    this.prizeText = this.scene.add.text(-10, 18, '', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ffd700',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    this.prizeText.setOrigin(1, 0.5);
+    this.scoreboardContainer.add(this.prizeText);
+    
+    // Initial update
+    this.updateScoreboard();
+  }
+  
+  private updateScoreboard(): void {
+    const attempts = scoreboard.getAttempts();
+    const prize = scoreboard.getPrizeFormatted();
+    
+    this.attemptsText.setText(`Attempts: ${attempts.toLocaleString()}`);
+    this.prizeText.setText(prize);
   }
 }

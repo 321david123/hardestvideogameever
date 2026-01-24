@@ -42,9 +42,6 @@ export class Player extends Entity {
   // Track phase for shield duration
   public phase: 1 | 2 = 1;
   
-  // God mode for testing
-  public godMode: boolean = false;
-  
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, C.COLOR_PLAYER, {
       hp: C.PLAYER_HP_PHASE1,
@@ -76,19 +73,6 @@ export class Player extends Entity {
     });
     label.setOrigin(0.5, 1);
     this.sprite.add(label);
-    
-    // God mode indicator (hidden by default)
-    const godModeLabel = scene.add.text(0, -this.radius - 25, 'GOD MODE', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#ffd700',
-      stroke: '#000000',
-      strokeThickness: 2,
-    });
-    godModeLabel.setOrigin(0.5, 1);
-    godModeLabel.setVisible(false);
-    godModeLabel.name = 'godModeLabel';
-    this.sprite.add(godModeLabel);
   }
   
   setTarget(target: Entity): void {
@@ -97,36 +81,6 @@ export class Player extends Entity {
   
   update(dt: number): void {
     this.currentTime += dt;
-    
-    // God mode toggle (G key) - check every frame but only toggle once per press
-    const gKey = this.scene.input.keyboard!.addKey('G');
-    if (Phaser.Input.Keyboard.JustDown(gKey)) {
-      this.godMode = !this.godMode;
-      console.log(`GOD MODE: ${this.godMode ? 'ON' : 'OFF'}`);
-      if (this.godMode) {
-        // Restore full HP when enabling god mode
-        this.stats.hp = this.stats.maxHp;
-      }
-      
-      // Update visual indicator
-      const godModeLabel = this.sprite.getByName('godModeLabel') as Phaser.GameObjects.Text;
-      if (godModeLabel) {
-        godModeLabel.setVisible(this.godMode);
-        // Pulsing animation when active
-        if (this.godMode) {
-          this.scene.tweens.add({
-            targets: godModeLabel,
-            alpha: { from: 0.5, to: 1 },
-            duration: 500,
-            yoyo: true,
-            repeat: -1,
-          });
-        } else {
-          this.scene.tweens.killTweensOf(godModeLabel);
-          godModeLabel.setAlpha(1);
-        }
-      }
-    }
     
     // Update movement direction from WASD first
     this.updateMoveDirection();
