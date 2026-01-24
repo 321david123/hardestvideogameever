@@ -13,7 +13,7 @@ export class PauseScreen {
   private onResume: (() => void) | null = null;
   private onRestart: (() => void) | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
-  
+
   // ============================================
   // CONTROLES DE VOLUMEN - CONFIGURACIÓN
   // ============================================
@@ -25,16 +25,16 @@ export class PauseScreen {
   private effectsVolumeHandle: Phaser.GameObjects.Rectangle | null = null;
   private musicVolumeText: Phaser.GameObjects.Text | null = null;
   private effectsVolumeText: Phaser.GameObjects.Text | null = null;
-  
+
   // Valores iniciales de volumen (0.0 a 1.0)
   // Estos se sobrescriben con los valores de MusicSystem
   // MODIFICA: Si quieres cambiar los valores por defecto, edita Music.ts
   private musicVolume: number = 0.4; // 40% por defecto
   private effectsVolume: number = 1.0; // 100% por defecto
-  
+
   private isDraggingMusic: boolean = false;
   private isDraggingEffects: boolean = false;
-  
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
@@ -42,15 +42,15 @@ export class PauseScreen {
     this.container.setScrollFactor(0);
     this.container.setVisible(false);
     this.container.setAlpha(0);
-    
+
     // Load saved volumes
     this.musicVolume = music.getMusicVolume();
     this.effectsVolume = music.getSoundEffectsVolume();
-    
+
     this.createBackground();
     this.createContent();
   }
-  
+
   private createBackground(): void {
     const overlay = this.scene.add.rectangle(
       0, 0,
@@ -59,7 +59,7 @@ export class PauseScreen {
     );
     this.container.add(overlay);
   }
-  
+
   private createContent(): void {
     // Título
     const title = this.scene.add.text(0, -200, 'PAUSADO', {
@@ -71,7 +71,7 @@ export class PauseScreen {
     });
     title.setOrigin(0.5);
     this.container.add(title);
-    
+
     // Subtítulo
     const subtitle = this.scene.add.text(0, -150,
       'El tiempo se detiene mientras decides tu próximo movimiento',
@@ -83,11 +83,11 @@ export class PauseScreen {
     );
     subtitle.setOrigin(0.5);
     this.container.add(subtitle);
-    
+
     // Divider
     const divider = this.scene.add.rectangle(0, -100, 500, 1, 0x444444);
     this.container.add(divider);
-    
+
     // Volume Controls Section
     const volumeTitle = this.scene.add.text(0, -60, 'AJUSTES DE AUDIO', {
       fontSize: '18px',
@@ -96,7 +96,7 @@ export class PauseScreen {
     });
     volumeTitle.setOrigin(0.5);
     this.container.add(volumeTitle);
-    
+
     // Music Volume
     const musicLabel = this.scene.add.text(-200, -20, 'Música:', {
       fontSize: '14px',
@@ -105,7 +105,7 @@ export class PauseScreen {
     });
     musicLabel.setOrigin(0, 0.5);
     this.container.add(musicLabel);
-    
+
     // Music slider background
     // MODIFICA: Cambia el ancho (300) para hacer el slider más largo o corto
     // MODIFICA: Cambia la altura (8) para hacer la barra más gruesa o delgada
@@ -118,7 +118,7 @@ export class PauseScreen {
     });
     this.container.add(musicSliderBg);
     this.musicVolumeSlider = musicSliderBg;
-    
+
     // Music slider handle (el círculo que arrastras)
     // MODIFICA: Cambia el tamaño (16, 20) para hacer el handle más grande o pequeño
     // MODIFICA: Cambia el color (0x4fd1c5) para cambiar el color del handle
@@ -131,7 +131,7 @@ export class PauseScreen {
     musicHandle.on('pointerdown', () => { this.isDraggingMusic = true; });
     this.container.add(musicHandle);
     this.musicVolumeHandle = musicHandle;
-    
+
     // Music volume text
     this.musicVolumeText = this.scene.add.text(160, -20, `${Math.round(this.musicVolume * 100)}%`, {
       fontSize: '12px',
@@ -140,7 +140,7 @@ export class PauseScreen {
     });
     this.musicVolumeText.setOrigin(0, 0.5);
     this.container.add(this.musicVolumeText);
-    
+
     // Effects Volume
     const effectsLabel = this.scene.add.text(-200, 20, 'Efectos:', {
       fontSize: '14px',
@@ -149,7 +149,7 @@ export class PauseScreen {
     });
     effectsLabel.setOrigin(0, 0.5);
     this.container.add(effectsLabel);
-    
+
     // Effects slider background
     const effectsSliderBg = this.scene.add.rectangle(0, 20, 300, 8, 0x333333);
     effectsSliderBg.setOrigin(0.5);
@@ -160,7 +160,7 @@ export class PauseScreen {
     });
     this.container.add(effectsSliderBg);
     this.effectsVolumeSlider = effectsSliderBg;
-    
+
     // Effects slider handle
     const effectsHandle = this.scene.add.rectangle(
       -150 + (this.effectsVolume * 300), 20,
@@ -171,7 +171,7 @@ export class PauseScreen {
     effectsHandle.on('pointerdown', () => { this.isDraggingEffects = true; });
     this.container.add(effectsHandle);
     this.effectsVolumeHandle = effectsHandle;
-    
+
     // Effects volume text
     this.effectsVolumeText = this.scene.add.text(160, 20, `${Math.round(this.effectsVolume * 100)}%`, {
       fontSize: '12px',
@@ -180,11 +180,11 @@ export class PauseScreen {
     });
     this.effectsVolumeText.setOrigin(0, 0.5);
     this.container.add(this.effectsVolumeText);
-    
+
     // Divider
     const divider2 = this.scene.add.rectangle(0, 80, 500, 1, 0x444444);
     this.container.add(divider2);
-    
+
     // Opciones
     const resumeText = this.scene.add.text(0, 120, '[ ESC ] Reanudar', {
       fontSize: '20px',
@@ -193,7 +193,7 @@ export class PauseScreen {
     });
     resumeText.setOrigin(0.5);
     this.container.add(resumeText);
-    
+
     const restartText = this.scene.add.text(0, 160, '[ R ] Reiniciar', {
       fontSize: '18px',
       fontFamily: 'monospace',
@@ -201,7 +201,7 @@ export class PauseScreen {
     });
     restartText.setOrigin(0.5);
     this.container.add(restartText);
-    
+
     // Pulse animation para el texto de reanudar
     this.pulseTween = this.scene.tweens.add({
       targets: resumeText,
@@ -210,7 +210,7 @@ export class PauseScreen {
       yoyo: true,
       repeat: -1,
     });
-    
+
     // Setup global pointer events for dragging
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.isDraggingMusic) {
@@ -220,62 +220,62 @@ export class PauseScreen {
         this.updateEffectsVolume(pointer);
       }
     });
-    
+
     this.scene.input.on('pointerup', () => {
       this.isDraggingMusic = false;
       this.isDraggingEffects = false;
     });
   }
-  
+
   private updateMusicVolume(pointer: Phaser.Input.Pointer): void {
     if (!this.musicVolumeSlider || !this.musicVolumeHandle || !this.musicVolumeText) return;
-    
+
     const sliderX = this.musicVolumeSlider.x + this.container.x;
     // MODIFICA: Cambia estos valores (150) si cambiaste el ancho del slider
     // Debe ser la mitad del ancho del slider (300 / 2 = 150)
     const sliderLeft = sliderX - 150;
     const sliderRight = sliderX + 150;
-    
+
     let newX = Phaser.Math.Clamp(pointer.x, sliderLeft, sliderRight);
     // MODIFICA: Cambia este valor (300) si cambiaste el ancho del slider
     const normalized = (newX - sliderLeft) / 300;
-    
+
     // El volumen va de 0.0 (0%) a 1.0 (100%)
     // El slider muestra el porcentaje de 0% a 100%
     this.musicVolume = Phaser.Math.Clamp(normalized, 0, 1);
     music.setVolume(this.musicVolume);
-    
+
     // MODIFICA: Cambia estos valores si cambiaste el ancho del slider
     this.musicVolumeHandle.setX(-150 + (this.musicVolume * 300));
     this.musicVolumeText.setText(`${Math.round(this.musicVolume * 100)}%`);
   }
-  
+
   private updateEffectsVolume(pointer: Phaser.Input.Pointer): void {
     if (!this.effectsVolumeSlider || !this.effectsVolumeHandle || !this.effectsVolumeText) return;
-    
+
     const sliderX = this.effectsVolumeSlider.x + this.container.x;
     const sliderLeft = sliderX - 150;
     const sliderRight = sliderX + 150;
-    
+
     let newX = Phaser.Math.Clamp(pointer.x, sliderLeft, sliderRight);
     const normalized = (newX - sliderLeft) / 300;
-    
+
     this.effectsVolume = Phaser.Math.Clamp(normalized, 0, 1);
     music.setSoundEffectsVolume(this.effectsVolume);
-    
+
     this.effectsVolumeHandle.setX(-150 + (this.effectsVolume * 300));
     this.effectsVolumeText.setText(`${Math.round(this.effectsVolume * 100)}%`);
   }
-  
+
   show(onResume: (() => void) | null, onRestart: (() => void) | null): void {
     this.onResume = onResume;
     this.onRestart = onRestart;
     this.visible = true;
-    
+
     // Update volumes from music system
     this.musicVolume = music.getMusicVolume();
     this.effectsVolume = music.getSoundEffectsVolume();
-    
+
     // Update slider positions
     if (this.musicVolumeHandle) {
       this.musicVolumeHandle.setX(-150 + (this.musicVolume * 300));
@@ -289,7 +289,7 @@ export class PauseScreen {
     if (this.effectsVolumeText) {
       this.effectsVolumeText.setText(`${Math.round(this.effectsVolume * 100)}%`);
     }
-    
+
     // Animate in
     this.container.setVisible(true);
     this.scene.tweens.add({
@@ -299,17 +299,17 @@ export class PauseScreen {
       ease: 'Cubic.easeOut',
     });
   }
-  
+
   hide(): void {
     this.visible = false;
-    
+
     // Stop pulse tween
     if (this.pulseTween) {
       this.pulseTween.stop();
       this.pulseTween.destroy();
       this.pulseTween = null;
     }
-    
+
     this.scene.tweens.add({
       targets: this.container,
       alpha: 0,
@@ -319,11 +319,11 @@ export class PauseScreen {
       },
     });
   }
-  
+
   isVisible(): boolean {
     return this.visible;
   }
-  
+
   destroy(): void {
     if (this.pulseTween) {
       this.pulseTween.destroy();
