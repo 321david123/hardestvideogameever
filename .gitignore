@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 
+# Global scoreboard state (live data, created by server)
+server/scoreboard.json
+
 # Logs
 *.log
 npm-debug.log*

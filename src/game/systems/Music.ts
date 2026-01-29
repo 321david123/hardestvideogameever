@@ -2,9 +2,9 @@
  * Music System - plays background music from MP3 file
  */
 
-// Import the MP3 files
-import musicFilePhase1 from '../../Pokémon FireRed & LeafGreen - Gym Leader & Elite Four Battle Music (HQ).mp3';
-import musicFilePhase2 from '../../Pokémon HeartGold & SoulSilver - Gym Leader & Elite Four Battle Music (HQ).mp3';
+// Import the MP3 files (ASCII filenames for Docker/Linux compatibility)
+import musicFilePhase1 from '../../music-phase1.mp3';
+import musicFilePhase2 from '../../music-phase2.mp3';
 
 export class MusicSystem {
   public audioPhase1: HTMLAudioElement | null = null;

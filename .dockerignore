@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+*.log
+.env*
+.cache
+.idea
+.vscode
+*.md
+server/scoreboard.json

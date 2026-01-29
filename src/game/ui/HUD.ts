@@ -499,4 +499,9 @@ export class HUD {
     this.attemptsText.setText(`Attempts: ${attempts.toLocaleString()}`);
     this.prizeText.setText(prize);
   }
+  
+  /** Call after scoreboard.recordAttempt() so the display updates immediately (e.g. on retry). */
+  refreshScoreboard(): void {
+    this.updateScoreboard();
+  }
 }

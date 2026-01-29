@@ -84,6 +84,9 @@ export class ArenaScene extends Phaser.Scene {
     this.deathScreen = new DeathScreen(this);
     this.pauseScreen = new PauseScreen(this);
     
+    // Load global prize pool so everyone sees the same number
+    scoreboard.load().then(() => this.hud.refreshScoreboard());
+    
     this.cameras.main.setBounds(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT);
     this.cameras.main.setBackgroundColor(C.COLOR_ARENA_BG);
     
@@ -101,9 +104,6 @@ export class ArenaScene extends Phaser.Scene {
     this.isPaused = false;
     this.isResuming = false;
     this.resumeCountdown = 0;
-    
-    // Record attempt in scoreboard
-    scoreboard.recordAttempt();
   }
   
   private async initMusic(): Promise<void> {
@@ -767,11 +767,12 @@ export class ArenaScene extends Phaser.Scene {
     this.restart();
   }
   
-  private restart(): void {
+  private async restart(): Promise<void> {
     this.deathScreen.hide();
 
-    // Count this as a new try and increase the prize pool
-    scoreboard.recordAttempt();
+    // Record retry on server so global prize goes up by $2.50 for everyone
+    await scoreboard.recordAttempt();
+    this.hud.refreshScoreboard();
     
     // Reset music to Phase 1
     if (music.currentAudio === music.audioPhase2) {
