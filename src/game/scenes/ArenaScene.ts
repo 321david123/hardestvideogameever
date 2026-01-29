@@ -769,6 +769,9 @@ export class ArenaScene extends Phaser.Scene {
   
   private restart(): void {
     this.deathScreen.hide();
+
+    // Count this as a new try and increase the prize pool
+    scoreboard.recordAttempt();
     
     // Reset music to Phase 1
     if (music.currentAudio === music.audioPhase2) {
