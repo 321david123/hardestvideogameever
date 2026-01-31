@@ -8,6 +8,13 @@ const PRIZE_INCREMENT = 2.5;
 const INITIAL_PRIZE = 1000;
 const API_BASE = '/api';
 
+function getApiUrl(path: string): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export class Scoreboard {
   private attempts: number = 0;
   private prizePool: number = INITIAL_PRIZE;
@@ -19,19 +26,23 @@ export class Scoreboard {
 
   /**
    * Load current global scoreboard from server. Call once when the game loads.
-   * On failure, keeps default (1000) and works offline.
+   * Retries once on failure. On failure, keeps default (1000) and works offline.
    */
   async load(): Promise<void> {
-    try {
-      const res = await fetch(`${API_BASE}/scoreboard`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (typeof data.attempts === 'number' && typeof data.prizePool === 'number') {
-        this.attempts = data.attempts;
-        this.prizePool = data.prizePool;
+    const url = getApiUrl(`${API_BASE}/scoreboard`);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (typeof data.attempts === 'number' && typeof data.prizePool === 'number') {
+          this.attempts = data.attempts;
+          this.prizePool = data.prizePool;
+          return;
+        }
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
       }
-    } catch {
-      // Offline or no server: keep defaults
     }
   }
 
@@ -40,8 +51,9 @@ export class Scoreboard {
    * On failure, increments locally so the game still works offline.
    */
   async recordAttempt(): Promise<void> {
+    const url = getApiUrl(`${API_BASE}/scoreboard/attempt`);
     try {
-      const res = await fetch(`${API_BASE}/scoreboard/attempt`, { method: 'POST' });
+      const res = await fetch(url, { method: 'POST', cache: 'no-store' });
       if (!res.ok) throw new Error('Server error');
       const data = await res.json();
       if (typeof data.attempts === 'number' && typeof data.prizePool === 'number') {

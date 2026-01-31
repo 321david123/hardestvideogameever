@@ -84,8 +84,8 @@ export class ArenaScene extends Phaser.Scene {
     this.deathScreen = new DeathScreen(this);
     this.pauseScreen = new PauseScreen(this);
     
-    // Load global prize pool so everyone sees the same number
-    scoreboard.load().then(() => this.hud.refreshScoreboard());
+    // Load global prize pool so everyone sees the same number (retry + refresh when done)
+    scoreboard.load().finally(() => this.hud.refreshScoreboard());
     
     this.cameras.main.setBounds(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT);
     this.cameras.main.setBackgroundColor(C.COLOR_ARENA_BG);
