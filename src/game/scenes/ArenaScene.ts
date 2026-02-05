@@ -17,6 +17,7 @@ import { scoreboard } from '../systems/Scoreboard';
 import { HUD } from '../ui/HUD';
 import { DeathScreen, GameStats } from '../ui/DeathScreen';
 import { PauseScreen } from '../ui/PauseScreen';
+import { TouchControls } from '../ui/TouchControls';
 import { Vec2, distance, normalize, scale } from '../utils/math';
 import * as C from '../utils/constants';
 
@@ -34,6 +35,7 @@ export class ArenaScene extends Phaser.Scene {
   private hud!: HUD;
   private deathScreen!: DeathScreen;
   private pauseScreen!: PauseScreen;
+  private touchControls: TouchControls | null = null;
   
   private gameOver: boolean = false;
   private isPaused: boolean = false;
@@ -53,7 +55,16 @@ export class ArenaScene extends Phaser.Scene {
   constructor() {
     super({ key: 'ArenaScene' });
   }
-  
+
+  private static isTouchDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    return (
+      'ontouchstart' in window ||
+      (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 0) ||
+      window.innerWidth <= 768
+    );
+  }
+
   create(): void {
     this.createArena();
     
@@ -69,7 +80,12 @@ export class ArenaScene extends Phaser.Scene {
     
     this.player.setTarget(this.void_);
     this.void_.setPlayer(this.player);
-    
+
+    if (ArenaScene.isTouchDevice()) {
+      this.touchControls = new TouchControls(this, () => this.togglePause());
+      this.player.setTouchControls(this.touchControls);
+    }
+
     this.combat = new CombatSystem(this.player, this.void_);
     this.combat.setCallbacks(
       (result) => this.onHit(result),
@@ -584,8 +600,8 @@ export class ArenaScene extends Phaser.Scene {
     this.isPaused = true;
     music.pause(); // Pausar música cuando se pausa el juego
     this.pauseScreen.show(
-      null, // No callback directo, usamos el handler de teclado
-      null  // No callback directo, usamos el handler de teclado
+      () => this.startResumeCountdown(),
+      () => this.restartFromPause()
     );
     
     // Setup input handlers cuando se muestra el menú de pausa

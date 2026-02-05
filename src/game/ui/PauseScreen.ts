@@ -10,10 +10,11 @@ export class PauseScreen {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private visible: boolean = false;
-  // Callbacks handled via keyboard events, not stored
-  // private onResume: (() => void) | null = null;
-  // private onRestart: (() => void) | null = null;
+  private onResumeCallback: (() => void) | null = null;
+  private onRestartCallback: (() => void) | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
+  private resumeText: Phaser.GameObjects.Text | null = null;
+  private restartText: Phaser.GameObjects.Text | null = null;
 
   // ============================================
   // CONTROLES DE VOLUMEN - CONFIGURACIÓN
@@ -186,26 +187,30 @@ export class PauseScreen {
     const divider2 = this.scene.add.rectangle(0, 80, 500, 1, 0x444444);
     this.container.add(divider2);
 
-    // Opciones
-    const resumeText = this.scene.add.text(0, 120, '[ ESC ] Reanudar', {
+    // Opciones (tap or keyboard)
+    this.resumeText = this.scene.add.text(0, 120, '[ ESC ] Reanudar', {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#4fd1c5',
     });
-    resumeText.setOrigin(0.5);
-    this.container.add(resumeText);
+    this.resumeText.setOrigin(0.5);
+    this.resumeText.setInteractive({ useHandCursor: true });
+    this.resumeText.on('pointerdown', () => this.onResumeCallback?.());
+    this.container.add(this.resumeText);
 
-    const restartText = this.scene.add.text(0, 160, '[ R ] Reiniciar', {
+    this.restartText = this.scene.add.text(0, 160, '[ R ] Reiniciar', {
       fontSize: '18px',
       fontFamily: 'monospace',
       color: '#888888',
     });
-    restartText.setOrigin(0.5);
-    this.container.add(restartText);
+    this.restartText.setOrigin(0.5);
+    this.restartText.setInteractive({ useHandCursor: true });
+    this.restartText.on('pointerdown', () => this.onRestartCallback?.());
+    this.container.add(this.restartText);
 
     // Pulse animation para el texto de reanudar
     this.pulseTween = this.scene.tweens.add({
-      targets: resumeText,
+      targets: this.resumeText,
       alpha: { from: 1, to: 0.5 },
       duration: 1000,
       yoyo: true,
@@ -268,8 +273,9 @@ export class PauseScreen {
     this.effectsVolumeText.setText(`${Math.round(this.effectsVolume * 100)}%`);
   }
 
-  show(_onResume: (() => void) | null, _onRestart: (() => void) | null): void {
-    // Callbacks stored but handled via keyboard events
+  show(onResume: (() => void) | null, onRestart: (() => void) | null): void {
+    this.onResumeCallback = onResume ?? null;
+    this.onRestartCallback = onRestart ?? null;
     this.visible = true;
 
     // Update volumes from music system

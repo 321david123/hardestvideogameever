@@ -27,6 +27,7 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
   },
   input: {
     keyboard: true,
+    touch: true,
   },
   render: {
     antialias: false,

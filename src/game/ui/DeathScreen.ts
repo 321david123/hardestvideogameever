@@ -165,13 +165,17 @@ export class DeathScreen {
     ratingText.setOrigin(0.5);
     this.container.add(ratingText);
     
-    // Instructions
+    // Instructions (tap or SPACE to retry)
     const restartText = this.scene.add.text(0, 160, '[ SPACE ] Try Again', {
       fontSize: '18px',
       fontFamily: 'monospace',
       color: '#4fd1c5',
     });
     restartText.setOrigin(0.5);
+    restartText.setInteractive({ useHandCursor: true });
+    restartText.on('pointerdown', () => {
+      if (this.visible && this.onRestart) this.onRestart();
+    });
     this.container.add(restartText);
     
     const copyText = this.scene.add.text(0, 195, '[ C ] Copy Results', {

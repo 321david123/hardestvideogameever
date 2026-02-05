@@ -180,6 +180,16 @@ export class SkillCheck {
       }
     }
   }
+
+  /** Mobile: tap the skill check area instead of pressing the key. */
+  private handleTap(): void {
+    if (this.state !== SkillCheckState.SHRINKING && this.state !== SkillCheckState.WAITING_INPUT) return;
+    this.keyPressTime = this.scene.time.now;
+    const timeDiff = Math.abs(this.keyPressTime - this.perfectMomentTime);
+    if (timeDiff <= 50) this.handleResult('perfect');
+    else if (timeDiff <= 150) this.handleResult('close');
+    else this.handleResult('miss');
+  }
   
   private handleResult(result: 'perfect' | 'close' | 'miss'): void {
     if (this.state === SkillCheckState.COMPLETE) return;
@@ -218,6 +228,8 @@ export class SkillCheck {
     this.container = this.scene.add.container(posX, posY);
     this.container.setDepth(500);
     this.container.setScrollFactor(0);
+    this.container.setInteractive(new Phaser.Geom.Circle(0, 0, 80), Phaser.Geom.Circle.Contains);
+    this.container.on('pointerdown', () => this.handleTap());
     
     // NO background box - just the squares
     // NO title text

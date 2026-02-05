@@ -1,17 +1,17 @@
 /**
- * Player entity - controlled by keyboard input
- * Dash goes in MOVEMENT direction (WASD)
- * Attack auto-aims at target (enemy)
- * Shield is HELD (E key) - drains while holding, regenerates when not using
- * NO INPUT BUFFERING - actions only work when cooldown is ready
+ * Player entity - keyboard (desktop) or TouchControls (mobile).
+ * Dash goes in MOVEMENT direction (WASD or left stick)
+ * Attack auto-aims at target. Shield is HELD (E or button).
  */
 
 import Phaser from 'phaser';
 import { Entity } from './Entity';
 import { Vec2, vec2, normalize, length, sub } from '../utils/math';
 import * as C from '../utils/constants';
+import type { TouchControls } from '../ui/TouchControls';
 
 export class Player extends Entity {
+  private touchControls: TouchControls | null = null;
   private keys: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
@@ -78,7 +78,15 @@ export class Player extends Entity {
   setTarget(target: Entity): void {
     this.target = target;
   }
-  
+
+  setTouchControls(tc: TouchControls | null): void {
+    this.touchControls = tc;
+  }
+
+  private useTouch(): boolean {
+    return !!this.touchControls?.isActive();
+  }
+
   update(dt: number): void {
     this.currentTime += dt;
     
@@ -99,71 +107,63 @@ export class Player extends Entity {
   }
   
   private handleShield(): void {
-    // Shield is HELD - check if key is down
-    if (this.keys.shield.isDown) {
-      if (!this.isShielding) {
-        this.startShield();
-      }
+    const shieldOn = this.useTouch() ? this.touchControls!.isShieldHeld() : this.keys.shield.isDown;
+    if (shieldOn) {
+      if (!this.isShielding) this.startShield();
     } else {
-      if (this.isShielding) {
-        this.stopShield();
-      }
+      if (this.isShielding) this.stopShield();
     }
   }
   
   private handleActions(): void {
-    // Can't act while shielding
     if (this.isShielding) {
-      this.dashPressedLastFrame = this.keys.dash.isDown;
-      this.attackPressedLastFrame = this.keys.attack.isDown;
+      this.dashPressedLastFrame = this.touchControls?.isActive() ? false : this.keys.dash.isDown;
+      this.attackPressedLastFrame = this.touchControls?.isActive() ? false : this.keys.attack.isDown;
       return;
     }
-    
-    // DASH - only on fresh press, only if cooldown ready
-    const dashPressed = this.keys.dash.isDown;
+
+    const dashPressed = this.touchControls?.isActive()
+      ? this.touchControls.consumeDashPressed()
+      : this.keys.dash.isDown;
     if (dashPressed && !this.dashPressedLastFrame) {
-      console.log('DASH key pressed');
-      // Fresh press - try to dash only if cooldown is ready
       if (this.dashCooldown.ready && this.canDash()) {
-        console.log('DASH executing');
         this.setFacing(this.lastMoveDirection);
         this.startDash();
-        console.log('DASH done');
       }
-      // If not ready, do nothing - no buffering
     }
-    this.dashPressedLastFrame = dashPressed;
-    
-    // ATTACK - only on fresh press, only if cooldown ready
-    const attackPressed = this.keys.attack.isDown;
+    this.dashPressedLastFrame = this.touchControls?.isActive() ? false : this.keys.dash.isDown;
+
+    const attackPressed = this.touchControls?.isActive()
+      ? this.touchControls.consumeAttackPressed()
+      : this.keys.attack.isDown;
     if (attackPressed && !this.attackPressedLastFrame) {
-      console.log('ATTACK key pressed');
-      // Fresh press - try to attack only if cooldown is ready
       if (this.attackCooldown.ready && this.canAttack()) {
-        console.log('ATTACK executing - setting direction');
         if (this.target) {
           const toTarget = sub(this.target.pos, this.pos);
-          if (length(toTarget) > 0) {
-            this.attackDirection = normalize(toTarget);
-          }
+          if (length(toTarget) > 0) this.attackDirection = normalize(toTarget);
         }
-        console.log('ATTACK starting');
         this.startAttack();
-        console.log('ATTACK done');
       }
-      // If not ready, do nothing - no buffering
     }
-    this.attackPressedLastFrame = attackPressed;
+    this.attackPressedLastFrame = this.touchControls?.isActive() ? false : this.keys.attack.isDown;
   }
   
   private updateMoveDirection(): void {
+    if (this.touchControls?.isActive()) {
+      const td = this.touchControls.getMoveDirection();
+      if (length(td) > 0) {
+        this.moveDirection = { ...td };
+        this.lastMoveDirection = { ...td };
+      } else {
+        this.moveDirection = vec2();
+      }
+      return;
+    }
     let moveDir = vec2();
-    
     if (this.keys.up.isDown) moveDir.y -= 1;
     if (this.keys.down.isDown) moveDir.y += 1;
     if (this.keys.left.isDown) moveDir.x -= 1;
     if (this.keys.right.isDown) moveDir.x += 1;
-    
     if (length(moveDir) > 0) {
       this.moveDirection = normalize(moveDir);
       this.lastMoveDirection = { ...this.moveDirection };
@@ -175,9 +175,9 @@ export class Player extends Entity {
       return;
     }
     
-    // Apply movement velocity
-    if (length(this.moveDirection) > 0 && 
-        (this.keys.up.isDown || this.keys.down.isDown || this.keys.left.isDown || this.keys.right.isDown)) {
+    const keyMove = this.keys.up.isDown || this.keys.down.isDown || this.keys.left.isDown || this.keys.right.isDown;
+    const touchMove = this.touchControls?.isActive() && length(this.moveDirection) > 0;
+    if (length(this.moveDirection) > 0 && (keyMove || touchMove)) {
       this.vel = { x: this.moveDirection.x * this.stats.speed, y: this.moveDirection.y * this.stats.speed };
       if (this.state !== 'attacking' && this.state !== 'shielding') {
         this.state = 'moving';
